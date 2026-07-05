@@ -1,65 +1,96 @@
-# G-Scores
+# G-Scores - THPT 2024 Exam Results Dashboard
 
-This is the instruction for web developer intern assignment at [Golden Owl](https://goldenowl.asia). You will build a simple web.
+G-Scores là ứng dụng Fullstack giúp tra cứu điểm thi, phân tích phổ điểm các môn học và vinh danh thủ khoa Khối A từ tập dữ liệu điểm thi tốt nghiệp THPT Quốc gia 2024 với hơn **1 triệu thí sinh**.
 
-Web template example. Hope you will make it more beautiful !!!
+Dự án được xây dựng đáp ứng đầy đủ yêu cầu bài test phỏng vấn của **Golden Owl Solutions**, tối ưu hiệu năng xử lý dữ liệu lớn và thiết kế giao diện hiện đại.
 
-![template example](./screenshots/mockup-ui.png) 
-# Requirements
-1. From the raw data file ([diem_thi_thpt_2024.csv](./dataset/diem_thi_thpt_2024.csv)) save it into the database with the appropriate structure
+---
 
-2. Your application should have at least features in [Must have](#must-have), things in [Nice to have](#nice-to-have) is optional (but yeah, it's attractive if you have).
+## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
 
-### Must have:
-- The conversion of raw data into the database must be coded and located in this source code. (**hint**: recommend use migration and seeder)
-- Write a feature to check score from registration number input
-- Write a feature report. There will be 4 levels including: >=8 points, 8 points > && >=6 points, 6 points > && >= 4 points, < 4 points
-    - Statistics of the number of students with scores in the above 4 levels by subjects. (Chart)
-- List top 10 students of group A including (math, physics, chemistry)
-### Nice to have:
-
-- Responsive design (look good on all devices: desktops, tablets & mobile phones).
-- Setup project use Docker.
-- Deploy the application to go live.
-
-# Technical Requirements
+### Backend
+* **Runtime**: Node.js & TypeScript
+* **Framework**: Express.js
+* **ORM**: Prisma ORM
+* **Database**: SQLite (tiện lợi chạy trực tiếp không cần cài đặt SQL server bên ngoài, dễ chuyển sang PostgreSQL/MySQL qua env)
 
 ### Frontend
-You can use any front-end library/framework like React, Angular, Vue, ... or just simple things with HTML + CSS + Javascript (JQuery).
-- For JS intern use React you need to have: 
-  * React Hooks
-- Fonts (optional);
-  - [https://fonts.google.com/specimen/Rubik?query=Rubik](https://fonts.google.com/specimen/Rubik?query=Rubik)
-- You can use some available interfaces such as: [AdminLTe](https://adminlte.io/), [TailAdmin](https://tailadmin.com/)...
-  
-### Backend: 
-Choose one of your applied back-end libraries/frameworks: Maybe Laravel(PHP), Ruby on Rails, NestJS (NodeJs), Django (Python), unlimited framework... or a structure that you come up with yourselt. 
-- **Mandatory** use of **OOP programming** for managing subjects.
-- Need form validation and logic tightening.
-- For NodeJs, use TypeScript is a plus.
-- Use ORM for interacting with Database.
-- Database: You can use postgreSQL, Mysql, mongoDB... to manage or cache the data. 
+* **Library**: React & TypeScript (scaffolded via Vite)
+* **Visualizations**: Recharts (vẽ biểu đồ cột chồng chất lượng cao)
+* **Styling**: Vanilla CSS (Premium Dark Mode & Glassmorphism)
+* **Icons**: Lucide React
 
-### Deployment
-Some providers allow free deployment for the trial version  (note: Maybe some suppliers will update their policies and prices)
+---
 
-- Heroku - https://heroku.com - Deploying Front & Backend
-- Vercel (Zeit) - https://vercel.com - Deploying Front & Backend apps at free of cost
-- Fly - https://fly.io - Deploying Front & Backend apps at free of cost
-- Deta - https://deta.sh - Deploying Node.js and Python apps and APIs. They support most web frameworks like Express, Koa, Flask, and FastAPI. They also provide a very fast and powerful NoSQL database for free.
-- Heliohost - https://heliohost.org - PHP, Ruby on rails, perl, django, java(jsp)
-- `...`
-# Submission
+## ⚡ Các Điểm Tối Ưu Nổi Bật (Optimizations & OOP)
 
-After completing the assignment, please push the source code to remote repository (github/gitlab), then send us the link to your repository.
+1. **Lập Trình Hướng Đối Tượng (OOP - Bắt buộc)**:
+   * Logic quản lý các môn học được xây dựng theo kiến trúc OOP trong tệp `backend/src/domain/subject.ts`.
+   * Định nghĩa lớp cha trừu tượng `Subject` chứa các luật kiểm tra tính hợp lệ (`validate`) và phân loại học lực (`classify`).
+   * Các lớp môn học con (như `MathSubject`, `PhysicsSubject`,...) kế thừa và triển khai các thuộc tính cụ thể của môn học đó.
+   * Quản lý tập trung qua lớp `SubjectManager` áp dụng mẫu thiết kế **Singleton** để đảm bảo tính đồng nhất và dễ mở rộng.
 
-Don't forget to add `README.md` which includes guide to run your project locally and demo link.
+2. **Xử Lý Dữ Liệu Lớn (1,061,605 dòng)**:
+   * **Streaming Parser**: Đọc file CSV bằng luồng (`readline` stream) giúp giữ RAM ở mức cực thấp (< 50MB) thay vì đọc toàn bộ file 43MB vào bộ nhớ làm crash Node.js.
+   * **Bulk Insert & Indexes**: Dữ liệu được đẩy vào SQLite theo các gói nhỏ (chunks 2000 dòng) và lập chỉ mục (index) tại cột số báo danh (`sbd`) và bộ ba môn Khối A (`toan, vat_li, hoa_hoc`) giúp tìm kiếm và xếp hạng chỉ mất vài mili-giây.
+   * **Pre-Computed Statistics**: Phổ điểm phân phối theo 4 mốc cấp độ được tính toán tích lũy ngay trong quá trình seed và lưu vào bảng `SubjectStatistic`. Nhờ vậy, biểu đồ thống kê tải ngay lập tức khi mở trang thay vì quét lại 1 triệu dòng dữ liệu.
 
+---
 
-**GOOD LUCK!!!**
+## 🚀 Hướng Dẫn Chạy Dự Án
 
-![Your Code Work](./screenshots/meme.png)
+### Cách 1: Chạy bằng Docker (Khuyên Dùng)
 
-# Contributors
+Dữ liệu SQLite đã được seed sẵn hoàn chỉnh. Bạn chỉ cần gõ 1 lệnh duy nhất tại thư mục gốc của dự án để chạy toàn bộ hệ thống:
 
-- Edric Cao (from GO)
+```bash
+docker compose up --build
+```
+
+Sau khi các container khởi động thành công:
+* **Frontend UI (React):** [http://localhost:3000](http://localhost:3000)
+* **Backend API (Express):** [http://localhost:5000](http://localhost:5000)
+
+---
+
+### Cách 2: Chạy Thủ Công (Local NPM)
+
+Nếu muốn chạy trực tiếp trên máy không dùng Docker, bạn mở 2 cửa sổ terminal riêng biệt:
+
+#### 1. Khởi động Backend
+```bash
+cd backend
+npm install
+npm run dev
+```
+* API sẽ chạy tại: [http://localhost:5000](http://localhost:5000)
+* *Lưu ý*: SQLite database đã được seed sẵn ở file `backend/prisma/dev.db`. Nếu bạn muốn xóa và seed lại từ đầu, hãy chạy lệnh: `npm run db:seed`.
+
+#### 2. Khởi động Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+* Trang web sẽ chạy tại: [http://localhost:5173/](http://localhost:5173/)
+
+---
+
+## 🧪 Các Tính Năng & Hướng Dẫn Kiểm Thử (E2E Testing)
+
+Mở trang web trên trình duyệt và kiểm thử các tính năng sau:
+
+### 1. Tra cứu điểm (Score Search)
+* **Kiểm tra Validation:** Thử nhập các ký tự chữ cái (ví dụ: `abc12345`) hoặc SBD thiếu số (ví dụ: `12345`). Nhấn **Tìm kiếm**, hệ thống sẽ báo lỗi màu đỏ yêu cầu nhập đúng định dạng 8 chữ số.
+* **Tìm kiếm hợp lệ:** Nhập SBD `01000001` (hoặc các số tiếp theo `01000002`, `01000003`, v.v.). Giao diện hiển thị card báo cáo điểm chi tiết, tính điểm trung bình và liệt kê đầy đủ 9 môn học (môn vắng thi hiển thị badge xám `Vắng`).
+* **Không tìm thấy:** Nhập SBD không tồn tại như `99999999` để kiểm tra thông báo lỗi.
+
+### 2. Thống kê phổ điểm (Distribution Stats)
+* Nhấp vào tab **Thống kê phổ điểm**.
+* Biểu đồ Stacked Bar Chart hiển thị tỷ lệ học lực của 9 môn học theo 4 phân khúc điểm: Giỏi (`>=8`), Khá (`6-8`), Trung bình (`4-6`), và Kém (`<4`).
+* Di chuột vào từng cột để xem thông số chi tiết qua tooltip. Phía dưới có bảng tóm tắt số liệu rõ ràng.
+
+### 3. Bảng vàng Khối A (Top 10 Leaderboard)
+* Nhấp vào tab **Bảng vàng Khối A**.
+* Bục vinh quang (Podium) 3D hiển thị rực rỡ vinh danh 3 thủ khoa đạt điểm Toán + Lý + Hóa cao nhất kỳ thi (Thủ khoa đạt `29.6` điểm, SBD `26020938`).
+* Phía dưới là bảng xếp hạng chi tiết từ Hạng 4 đến Hạng 10 kèm bảng điểm thành phần.

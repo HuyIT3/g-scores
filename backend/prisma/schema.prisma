@@ -1,0 +1,34 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Student {
+  sbd          String  @id
+  toan         Float?
+  ngu_van      Float?
+  ngoai_ngu    Float?
+  vat_li       Float?
+  hoa_hoc      Float?
+  sinh_hoc     Float?
+  lich_su      Float?
+  dia_li       Float?
+  gdcd         Float?
+  ma_ngoai_ngu String?
+
+  @@index([sbd])
+  @@index([toan, vat_li, hoa_hoc])
+}
+
+model SubjectStatistic {
+  id        Int    @id @default(autoincrement())
+  subject   String
+  level     String
+  count     Int
+
+  @@unique([subject, level])
+}
