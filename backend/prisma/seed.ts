@@ -49,18 +49,19 @@ async function main() {
   const BATCH_SIZE = 2000;
   let totalCount = 0;
   const startTime = Date.now();
+  let isWriting = false;
 
-  for await (const line of rl) {
+  rl.on('line', (line) => {
     if (isHeader) {
       isHeader = false;
-      continue;
+      return;
     }
 
     const parts = line.split(',');
-    if (parts.length < 11) continue;
+    if (parts.length < 11) return;
 
     const sbd = parts[0].trim();
-    if (!sbd) continue;
+    if (!sbd) return;
 
     const record = {
       sbd,
@@ -89,55 +90,86 @@ async function main() {
 
     batch.push(record);
 
-    if (batch.length >= BATCH_SIZE) {
-      await prisma.student.createMany({
-        data: batch
-      });
-      totalCount += batch.length;
-      if (totalCount % 50000 === 0) {
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`Seeded ${totalCount} records... (${elapsed}s elapsed)`);
-      }
+    if (batch.length >= BATCH_SIZE && !isWriting) {
+      rl.pause(); // Pause file reading synchronously
+      isWriting = true;
+      const currentBatch = [...batch];
       batch = [];
+
+      (async () => {
+        try {
+          await prisma.student.createMany({
+            data: currentBatch
+          });
+          totalCount += currentBatch.length;
+          if (totalCount % 50000 === 0) {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`Seeded ${totalCount} records... (${elapsed}s elapsed)`);
+          }
+        } catch (err) {
+          console.error('Error inserting batch:', err);
+        } finally {
+          isWriting = false;
+          rl.resume(); // Resume reading
+        }
+      })();
     }
-  }
-
-  // Insert the remaining batch
-  if (batch.length > 0) {
-    await prisma.student.createMany({
-      data: batch
-    });
-    totalCount += batch.length;
-  }
-
-  const elapsedTotal = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`Total students seeded: ${totalCount} in ${elapsedTotal}s`);
-
-  // Insert pre-computed statistics
-  console.log('Saving pre-computed subject statistics...');
-  const statsBatch: any[] = [];
-  for (const subjectCode of Object.keys(stats)) {
-    for (const level of Object.keys(stats[subjectCode])) {
-      statsBatch.push({
-        subject: subjectCode,
-        level,
-        count: stats[subjectCode][level]
-      });
-    }
-  }
-
-  await prisma.subjectStatistic.createMany({
-    data: statsBatch
   });
 
-  console.log('Database seeding finished successfully!');
+  rl.on('close', async () => {
+    // Wait for any active write to finish before performing final cleanup
+    const checkActiveWriteAndFinish = async () => {
+      if (isWriting) {
+        setTimeout(checkActiveWriteAndFinish, 100);
+        return;
+      }
+
+      // Insert the remaining batch
+      if (batch.length > 0) {
+        try {
+          await prisma.student.createMany({
+            data: batch
+          });
+          totalCount += batch.length;
+        } catch (err) {
+          console.error('Error inserting final batch:', err);
+        }
+      }
+
+      const elapsedTotal = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`Total students seeded: ${totalCount} in ${elapsedTotal}s`);
+
+      // Insert pre-computed statistics
+      console.log('Saving pre-computed subject statistics...');
+      const statsBatch: any[] = [];
+      for (const subjectCode of Object.keys(stats)) {
+        for (const level of Object.keys(stats[subjectCode])) {
+          statsBatch.push({
+            subject: subjectCode,
+            level,
+            count: stats[subjectCode][level]
+          });
+        }
+      }
+
+      try {
+        await prisma.subjectStatistic.createMany({
+          data: statsBatch
+        });
+        console.log('Database seeding finished successfully!');
+      } catch (err) {
+        console.error('Error saving statistics:', err);
+      } finally {
+        await prisma.$disconnect();
+      }
+    };
+
+    await checkActiveWriteAndFinish();
+  });
 }
 
 main()
   .catch((e) => {
     console.error('Error during seeding:', e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });
